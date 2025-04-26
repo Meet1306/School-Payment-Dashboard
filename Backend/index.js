@@ -15,9 +15,11 @@ app.use(express.json());
 const { auth } = require("./Middlewares/Auth");
 const { userRouter } = require("./routes/userRouter");
 const { transactionRouter } = require("./routes/transactionRouter");
+const { webhookRouter } = require("./routes/webhookRouter");
 
 app.use("/api/user", userRouter);
 app.use("/api/transaction", auth, transactionRouter);
+app.use("/webhook", webhookRouter);
 
 mongoose
   .connect(process.env.MONGO_URI, {

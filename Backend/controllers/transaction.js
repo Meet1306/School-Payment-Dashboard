@@ -7,16 +7,10 @@ const handleCreateTransaction = async (req, res) => {
     const { school_id, trustee_id, amount, gateway_name } = req.body;
     //school_id, trustee_id, gateway_name
     const user = req.user;
-    if (!user) {
-      return res.status(401).json({ message: "Unauthorized" });
+
+    if (!school_id || !trustee_id || !amount || !gateway_name) {
+      return res.status(400).json({ message: "Invalid request" });
     }
-    const Order = new order({
-      school_id: school_id.toString(),
-      trustee_id,
-      student_info: user,
-      gateway_name,
-    });
-    await Order.save();
 
     const payload = {
       school_id: school_id.toString(),
@@ -41,6 +35,15 @@ const handleCreateTransaction = async (req, res) => {
       }
     );
 
+    const newOrder = new order({
+      txId: response.data.collect_request_id,
+      school_id,
+      trustee_id,
+      student_info: user,
+      gateway_name,
+    });
+    await newOrder.save();
+
     return res.json({
       collect_request_id: response.data.collect_request_id,
       collect_request_url: response.data.collect_request_url,
@@ -55,6 +58,11 @@ const handleCreateTransaction = async (req, res) => {
 const handleVerifyTransaction = async (req, res) => {
   try {
     const { collect_request_id, school_id } = req.query;
+    if (!collect_request_id || !school_id) {
+      return res
+        .status(400)
+        .json({ message: "Invalid url for verifying the transaction" });
+    }
     const payload = {
       school_id,
       collect_request_id,

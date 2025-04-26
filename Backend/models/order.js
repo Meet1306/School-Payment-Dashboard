@@ -1,6 +1,10 @@
 const mongoose = require("mongoose");
 
 const orderSchema = new mongoose.Schema({
+  txId: {
+    type: String,
+    required: true,
+  },
   school_id: {
     type: String,
     required: true,
