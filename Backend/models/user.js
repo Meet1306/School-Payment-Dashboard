@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const validator = require("validator");
 
 const userSchema = new mongoose.Schema(
   {
@@ -23,6 +24,16 @@ const userSchema = new mongoose.Schema(
 
 userSchema.statics.register = async function (name, email, password) {
   try {
+    //validate the email and password using validator
+    if (!validator.isEmail(email)) {
+      throw new Error("Invalid email format");
+    }
+    if (!validator.isStrongPassword(password)) {
+      throw new Error(
+        "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one symbol"
+      );
+    }
+
     const existingUser = await this.findOne({ email });
     if (existingUser) {
       throw new Error("User already exists");
@@ -38,6 +49,14 @@ userSchema.statics.register = async function (name, email, password) {
 
 userSchema.statics.login = async function (email, password) {
   try {
+    if (!validator.isEmail(email)) {
+      throw new Error("Invalid email format");
+    }
+    if (!validator.isStrongPassword(password)) {
+      throw new Error(
+        "Password must be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one symbol"
+      );
+    }
     const user = await this.findOne({ email });
     if (!user) {
       throw new Error("Invalid email ");

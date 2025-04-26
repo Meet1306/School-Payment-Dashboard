@@ -3,8 +3,7 @@ const mongoose = require("mongoose");
 const orderStatusSchema = new mongoose.Schema(
   {
     collect_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "order",
+      type: String,
       required: true,
     },
     order_amount: {

@@ -18,7 +18,7 @@ const { transactionRouter } = require("./routes/transactionRouter");
 const { webhookRouter } = require("./routes/webhookRouter");
 
 app.use("/api/user", userRouter);
-app.use("/api/transaction", auth, transactionRouter);
+app.use("/api/transactions", auth, transactionRouter);
 app.use("/webhook", webhookRouter);
 
 mongoose
