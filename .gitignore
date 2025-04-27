@@ -1,50 +1,42 @@
-# Ignore system files
+# Node modules (both frontend and backend)
+frontend/node_modules/
+backend/node_modules/
+
+# Build outputs
+frontend/build/
+backend/dist/
+
+# Logs
+*.log
+frontend/npm-debug.log*
+backend/npm-debug.log*
+frontend/yarn-debug.log*
+backend/yarn-debug.log*
+frontend/yarn-error.log*
+backend/yarn-error.log*
+
+# Environment files
+frontend/.env
+backend/.env
+
+# OS generated files
 .DS_Store
 Thumbs.db
 
-# Ignore logs and temp files
-*.log
-*.out
-*.tmp
-*.swp
-*.swo
+# IDE settings
+.vscode/
+.idea/
 
-# Ignore compiled files
-*.o
-*.obj
-*.exe
-*.class
-*.pyc
-*.pyo
-*.so
+# Coverage outputs
+frontend/coverage/
+backend/coverage/
 
-# Ignore dependency directories
-node_modules/
-vendor/
-venv/
-__pycache__/
+# Others
+frontend/.next/
+backend/.next/
+frontend/.turbo/
+backend/.turbo/
 
-# Ignore build and IDE files
-build/
-dist/
-*.jar
-*.war
-*.zip
-*.tar.gz
-*.apk
-*.ipynb_checkpoints/
-
-# Ignore environment files
-.env
-*.local
-secrets.json
-config.yaml
-
-# Ignore database and cache files
+# Optional: Ignore local database files
 *.sqlite
-*.db
-*.db-journal
-
-# Ignore Git-related files
-.git/
-*.orig
+*.sqlite3
