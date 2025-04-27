@@ -40,3 +40,4 @@ backend/.turbo/
 # Optional: Ignore local database files
 *.sqlite
 *.sqlite3
+*.pdf
