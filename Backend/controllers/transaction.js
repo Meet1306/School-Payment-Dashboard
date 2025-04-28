@@ -79,38 +79,9 @@ const handleCreateTransaction = async (req, res) => {
   }
 };
 
-const handleVerifyTransaction = async (req, res) => {
-  try {
-    const { collect_request_id, school_id } = req.query;
-    if (!collect_request_id || !school_id) {
-      return res
-        .status(400)
-        .json({ message: "Invalid url for verifying the transaction" });
-    }
-    const payload = {
-      school_id,
-      collect_request_id,
-    };
-    const sign = jwt.sign(payload, process.env.pg_key);
-    const response = await axios.get(
-      `https://dev-vanilla.edviron.com/erp/collect-request/${collect_request_id}?school_id=${school_id}&sign=${sign}`,
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.API_KEY}`,
-        },
-      }
-    );
-    return res.json(response.data);
-  } catch (error) {
-    console.log("Error verifying payment:", error);
-    return res.status(500).json({ message: "Internal server error" });
-  }
-};
-
 const handleFetchAllTransactions = async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit) || 10;
+    const limit = parseInt(req.query.limit) || 2;
     const page = parseInt(req.query.page) || 1;
 
     const skip = (page - 1) * limit;
@@ -128,14 +99,63 @@ const handleFetchAllTransactions = async (req, res) => {
       nextPage,
       previousPage,
     };
-    // res.set("X-Pagination", JSON.stringify(pagination));
 
-    const transactions = await orderStatus.aggregate([
+    const transactions = await orderStatus
+      .aggregate([
+        {
+          $lookup: {
+            from: "orders",
+            localField: "collect_id",
+            foreignField: "txId",
+            as: "orderData",
+          },
+        },
+        {
+          $unwind: "$orderData",
+        },
+        {
+          $project: {
+            collect_id: 1,
+            school_id: "$orderData.school_id",
+            gateway: "$orderData.gateway_name",
+            order_amount: 1,
+            transaction_amount: 1,
+            status: 1,
+            payment_time: 1,
+            custom_order_id: "$orderData._id",
+          },
+        },
+        {
+          $sort: {
+            payment_time: -1,
+          },
+        },
+      ])
+      .skip(skip)
+      .limit(limit);
+
+    res.json({ transactions, pagination });
+  } catch (error) {
+    console.log("Error fetching transactions:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+const handleFetchSchoolTransactions = async (req, res) => {
+  const { school_id } = req.params;
+
+  try {
+    const limit = parseInt(req.query.limit) || 2;
+    const page = parseInt(req.query.page) || 1;
+    const skip = (page - 1) * limit;
+    const totalTransactions = await order.countDocuments({ school_id });
+    const totalPages = Math.ceil(totalTransactions / limit);
+
+    const transactions = await order.aggregate([
       {
         $lookup: {
-          from: "orders",
-          localField: "collect_id",
-          foreignField: "txId",
+          from: "orderstatuses",
+          localField: "txId",
+          foreignField: "collect_id",
           as: "orderData",
         },
       },
@@ -144,18 +164,12 @@ const handleFetchAllTransactions = async (req, res) => {
       },
       {
         $project: {
-          collect_id: 1,
-          school_id: "$orderData.school_id",
-          gateway: "$orderData.gateway_name",
-          order_amount: 1,
-          transaction_amount: 1,
-          status: 1,
-          payment_time: 1,
-          custom_order_id: "$orderData._id",
+          txId: 1,
+          student_info: 1,
+          gateway: 1,
+          status: "$orderData.status",
+          trustee_id: 1,
         },
-      },
-      {
-        $sort: { payment_time: -1 }, //1 for ascending, -1 for descending
       },
       {
         $skip: skip,
@@ -165,21 +179,20 @@ const handleFetchAllTransactions = async (req, res) => {
       },
     ]);
 
-    res.json({ transactions, pagination });
-  } catch (error) {
-    console.log("Error fetching transactions:", error);
-    return res.status(500).json({ message: "Internal server error" });
-  }
-};
-
-const handleFetchSchoolTransactions = async (req, res) => {
-  const { school_id } = req.params;
-  try {
-    const SchoolTransactions = await order.find({ school_id });
-    if (!SchoolTransactions) {
+    if (!transactions || transactions.length === 0) {
       return res.status(404).json({ message: "No transactions found" });
     }
-    return res.json(SchoolTransactions);
+
+    return res.json({
+      transactions,
+      pagination: {
+        totalTransactions,
+        totalPages,
+        currentPage: page,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+    });
   } catch (error) {
     console.error("Error fetching transactions:", error);
     res.status(500).json({ message: "Internal server error" });
@@ -210,7 +223,7 @@ const handleCheckTransactionStatus = async (req, res) => {
 
 module.exports = {
   handleCreateTransaction,
-  handleVerifyTransaction,
+
   handleFetchAllTransactions,
   handleFetchSchoolTransactions,
   handleCheckTransactionStatus,

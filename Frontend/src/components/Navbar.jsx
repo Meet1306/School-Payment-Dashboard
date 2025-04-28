@@ -1,64 +1,108 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 
 function Navbar() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  // Helper function to determine if link is active
-  const isActive = (path) => {
-    return location.pathname === path;
+  useEffect(() => {
+    const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+    setIsLoggedIn(!!token);
+  }, [location]);
+
+  const isActive = (path) => location.pathname === path;
+
+  const handleLogout = () => {
+    // Clear all auth-related storage
+    localStorage.removeItem('authToken');
+    sessionStorage.removeItem('authToken');
+    localStorage.removeItem('userData');
+    sessionStorage.removeItem('userData');
+    
+    setIsLoggedIn(false);
+    navigate('/login');
   };
 
   return (
-    <nav className="bg-gradient-to-r from-blue-600 to-blue-800 text-white shadow-lg">
+    <header className="bg-white shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo/Title */}
-          <div className="flex-shrink-0 flex items-center">
-            <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-100 to-white">
-              School Payment Dashboard
-            </h1>
+        <div className="flex justify-between h-16 items-center">
+          <div className="flex items-center">
+            <Link to="/" className="text-xl font-bold text-blue-600">
+              SchoolPay
+            </Link>
           </div>
           
-          {/* Navigation Links */}
-          <div className="hidden md:block">
-            <div className="ml-10 flex items-center space-x-8">
-              <Link 
-                to="/" 
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-                  isActive("/") 
-                    ? "bg-blue-900 text-white shadow-inner" 
-                    : "text-blue-100 hover:text-white hover:bg-blue-700"
-                }`}
+          {isLoggedIn ? (
+            <div className="flex items-center space-x-4">
+              <nav className="hidden md:flex space-x-8">
+                <Link
+                  to="/"
+                  className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                    isActive("/")
+                      ? "border-blue-500 text-gray-900"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
+                >
+                  Transactions
+                </Link>
+                <Link
+                  to="/transaction-details"
+                  className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                    isActive("/transaction-details")
+                      ? "border-blue-500 text-gray-900"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
+                >
+                  By School
+                </Link>
+                <Link
+                  to="/check-status"
+                  className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                    isActive("/check-status")
+                      ? "border-blue-500 text-gray-900"
+                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  }`}
+                >
+                  Check Status
+                </Link>
+              </nav>
+              <button
+                onClick={handleLogout}
+                className="ml-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
-                Transactions
-              </Link>
-              
-              <Link 
-                to="/transaction-details" 
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-                  isActive("/transaction-details") 
-                    ? "bg-blue-900 text-white shadow-inner" 
-                    : "text-blue-100 hover:text-white hover:bg-blue-700"
-                }`}
-              >
-                By School
-              </Link>
-              
-              <Link 
-                to="/check-status" 
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
-                  isActive("/check-status") 
-                    ? "bg-blue-900 text-white shadow-inner" 
-                    : "text-blue-100 hover:text-white hover:bg-blue-700"
-                }`}
-              >
-                Check Status
-              </Link>
+                Logout
+              </button>
             </div>
-          </div>
+          ) : (
+            <nav className="hidden md:flex space-x-8">
+              <Link
+                to="/login"
+                className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                  isActive("/login")
+                    ? "border-blue-500 text-gray-900"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+              >
+                Login
+              </Link>
+              <Link
+                to="/register"
+                className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                  isActive("/register")
+                    ? "border-blue-500 text-gray-900"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+              >
+                Register
+              </Link>
+ 
+            </nav>
+          )}
         </div>
       </div>
-    </nav>
+    </header>
   );
 }
 
