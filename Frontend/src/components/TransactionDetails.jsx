@@ -1,7 +1,7 @@
 import { useState } from "react";
 import API from "../services/api";
 
-const TRANSACTIONS_PER_PAGE = 2;
+const TRANSACTIONS_PER_PAGE = 5;
 
 function SchoolTransactions() {
   const [schoolId, setSchoolId] = useState("");

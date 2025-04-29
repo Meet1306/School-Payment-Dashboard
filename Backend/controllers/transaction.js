@@ -144,7 +144,7 @@ const handleFetchSchoolTransactions = async (req, res) => {
   const { school_id } = req.params;
 
   try {
-    const limit = parseInt(req.query.limit) || 2;
+    const limit = parseInt(req.query.limit) || 5;
     const page = parseInt(req.query.page) || 1;
     const skip = (page - 1) * limit;
     const totalTransactions = await order.countDocuments({ school_id });
