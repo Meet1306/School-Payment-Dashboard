@@ -5,7 +5,7 @@ const { order } = require("../models/order");
 
 webhookRouter.post("/", async (req, res) => {
   const orderInfo = req.body.order_info;
-  console.log("Webhook received:", orderInfo);
+  // console.log("Webhook received:", orderInfo);
 
   try {
     const Order = await order.findOne({
@@ -30,11 +30,29 @@ webhookRouter.post("/", async (req, res) => {
     });
     await newOrderStatus.save();
 
-    const gateway = orderInfo.gateway_name;
+    const gateway = orderInfo.gateway;
     await Order.updateOne(
       { txId: orderInfo.order_id },
       { gateway_name: gateway }
     );
+
+    const transaction = {
+      collect_id: orderInfo.order_id,
+      school_id: Order.school_id,
+      gateway,
+      order_amount: orderInfo.order_amount,
+      transaction_amount: orderInfo.transaction_amount,
+      status: orderInfo.status,
+      payment_time: orderInfo.payment_time,
+      custom_order_id: Order._id,
+    };
+
+    const io = req.app.get("io"); // Get the io instance from app settings
+    if (io) {
+      io.emit("transaction", transaction); // Emit the transaction event to all connected clients
+    } else {
+      console.log("Socket.io instance not found in app settings.");
+    }
 
     res.status(200).json({ message: "Webhook received" });
   } catch (error) {

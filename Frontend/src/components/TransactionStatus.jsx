@@ -60,7 +60,7 @@ function TransactionStatus() {
           <div className="space-y-4">
             <div>
               <label htmlFor="transaction-id" className="block text-sm font-medium text-gray-700 mb-1.5">
-                Transaction ID
+                Order ID
               </label>
               <div className="relative">
                 <input

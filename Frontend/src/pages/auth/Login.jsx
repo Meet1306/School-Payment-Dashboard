@@ -1,21 +1,35 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import AuthLayout from '../../components/auth/AuthLayout';
 import AuthForm from '../../components/auth/AuthForm';
 import { useAuth } from '../../context/AuthContext'; 
 import { loginUser as apiLogin } from '../../services/auth'; 
 
 const Login = () => {
-  const { login } = useAuth();
+  const { login, token } = useAuth(); // Get token from context
+  const navigate = useNavigate();
+
+  // Check for existing token on component mount
+  useEffect(() => {
+    if (token) {
+      navigate('/'); // Redirect to dashboard if token exists
+    }
+  }, [token, navigate]);
 
   const handleLogin = async (credentials) => {
     try {
       const response = await apiLogin(credentials);
-      login(response);
+      login(response); 
       return response;
     } catch (error) {
       throw error; 
     }
   };
+
+  // Don't render login form if token exists
+  if (token) {
+    return null; // or a loading spinner
+  }
 
   return (
     <AuthLayout

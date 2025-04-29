@@ -2,7 +2,7 @@ const jwt = require("jsonwebtoken");
 const { order } = require("../models/order");
 const { orderStatus } = require("../models/orderStatus");
 const axios = require("axios");
-const { transactionRouter } = require("../routes/transactionRouter");
+
 
 const handleCreateTransaction = async (req, res) => {
   try {
@@ -81,7 +81,7 @@ const handleCreateTransaction = async (req, res) => {
 
 const handleFetchAllTransactions = async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit) || 2;
+    const limit = parseInt(req.query.limit) || 5;
     const page = parseInt(req.query.page) || 1;
 
     const skip = (page - 1) * limit;
