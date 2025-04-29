@@ -1,0 +1,252 @@
+{
+	"info": {
+		"_postman_id": "9e80bedd-097e-4fc7-a4f4-64aa346a0fef",
+		"name": "Edviron",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "39960383"
+	},
+	"item": [
+		{
+			"name": "Register",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "urlencoded",
+					"urlencoded": [
+						{
+							"key": "name",
+							"value": "Meet",
+							"type": "text"
+						},
+						{
+							"key": "email",
+							"value": "meet@gmail.com",
+							"type": "text"
+						},
+						{
+							"key": "password",
+							"value": "Meet@1234",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/user/register",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"user",
+						"register"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Login",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "urlencoded",
+					"urlencoded": [
+						{
+							"key": "email",
+							"value": "meet@gmail.com",
+							"type": "text"
+						},
+						{
+							"key": "password",
+							"value": "Meet@1234",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/user/login",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"user",
+						"login"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create Payement",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiUGF0ZWwiLCJpZCI6IjY4MGJiYzk2NDM0MzgzODdmNzZiMGE0MCIsImVtYWlsIjoicGF0ZWxAZ21haWwuY29tIiwiaWF0IjoxNzQ1NTk5NjUyLCJleHAiOjE3NDU2MDMyNTJ9.SE9lqd4CsQqyNbSY2Qqvc76hwstYnMdpEetXkhUX9K8",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "urlencoded",
+					"urlencoded": [
+						{
+							"key": "school_id",
+							"value": "1",
+							"type": "text"
+						},
+						{
+							"key": "trustee_id",
+							"value": "1",
+							"type": "text"
+						},
+						{
+							"key": "amount",
+							"value": "100",
+							"type": "text"
+						},
+						{
+							"key": "gateway_name",
+							"value": "paytm",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/transaction/create-payment",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"transaction",
+						"create-payment"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Check Payment",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": ""
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Webhook",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n \"status\": 200,\r\n \"order_info\": {\r\n \"order_id\": \"collect_id/transaction_id\",\r\n \"order_amount\": 2000,\r\n \"transaction_amount\": 2200,\r\n \"gateway\": \"PhonePe\",\r\n \"bank_reference\": \"YESBNK222\",\r\n \"status\": \"success\",\r\n \"payment_mode\": \"upi\",\r\n \"payemnt_details\": \"success@ybl\",\r\n \"Payment_message\": \"payment success\",\r\n \"payment_time\": \"2025-04-23T08:14:21.945+00:00\",\r\n \"error_message\": \"NA\"\r\n }",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5000/webhook",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"webhook"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Fetch All Transactions",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiTWVldCIsImlkIjoiNjgwZTQ4ZWIyZjlmZTJiYTU1MzFiZDU5IiwiZW1haWwiOiJtZWV0QGdtYWlsLmNvbSIsImlhdCI6MTc0NTc2NjY1MCwiZXhwIjoxNzQ1NzcwMjUwfQ.CaJEGICymrF9Wpkzt2JsfZ8hVFHbrvG_h3-WtTjROZM",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:5000/api/transactions",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"transactions"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Fetch School Transactions",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": ""
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Transaction Status",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": ""
+				}
+			},
+			"response": []
+		}
+	]
+}
