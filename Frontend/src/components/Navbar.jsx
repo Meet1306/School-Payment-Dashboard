@@ -1,28 +1,12 @@
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext"; // Update path as needed
 
 function Navbar() {
   const location = useLocation();
-  const navigate = useNavigate();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  useEffect(() => {
-    const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
-    setIsLoggedIn(!!token);
-  }, [location]);
+  const { user, token, logout } = useAuth();
+  const isLoggedIn = !!token;
 
   const isActive = (path) => location.pathname === path;
-
-  const handleLogout = () => {
-    // Clear all auth-related storage
-    localStorage.removeItem('authToken');
-    sessionStorage.removeItem('authToken');
-    localStorage.removeItem('userData');
-    sessionStorage.removeItem('userData');
-    
-    setIsLoggedIn(false);
-    navigate('/login');
-  };
 
   return (
     <header className="bg-white shadow-sm">
@@ -69,7 +53,7 @@ function Navbar() {
                 </Link>
               </nav>
               <button
-                onClick={handleLogout}
+                onClick={logout}
                 className="ml-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
                 Logout

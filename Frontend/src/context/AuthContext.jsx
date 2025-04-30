@@ -21,7 +21,8 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
     localStorage.removeItem('authToken');
     localStorage.removeItem('userData');
-    window.location.href = '/login';
+    navigate('/login', { replace: true });
+    window.location.reload(); // Force refresh to reset all state
   };
 
   useEffect(() => {

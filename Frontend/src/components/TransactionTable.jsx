@@ -4,7 +4,7 @@ import { io } from "socket.io-client";
 import API from "../services/api";
 
 const TRANSACTIONS_PER_PAGE = 5;
-const SOCKET_URL = "http://localhost:5000/";
+const SOCKET_URL = "https://school-payment-dashboard-dief.onrender.com/";
 
 function TransactionTable() {
   const [searchParams, setSearchParams] = useSearchParams();
