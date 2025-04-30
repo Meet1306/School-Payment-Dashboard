@@ -1,94 +1,150 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import { io } from "socket.io-client";
 import API from "../services/api";
 
 const TRANSACTIONS_PER_PAGE = 5;
-const SOCKET_URL = "http://localhost:5000";
+const SOCKET_URL = "http://localhost:5000/";
 
 function TransactionTable() {
-  const [allTransactions, setAllTransactions] = useState([]);
-  const [filteredTransactions, setFilteredTransactions] = useState([]);
-  const [statusFilter, setStatusFilter] = useState("");
-  const [page, setPage] = useState(1);
-  const [pagination, setPagination] = useState({
-    totalTransactions: 0,
-    totalPages: 1,
-    hasNextPage: false,
-    hasPreviousPage: false,
-  });
+  const [searchParams, setSearchParams] = useSearchParams();
+  const page = parseInt(searchParams.get("page") || "1");
+  const statusFilter = searchParams.get("status") || "";
+
+  const [transactionsMap, setTransactionsMap] = useState(new Map());
   const [loading, setLoading] = useState(false);
   const [newTransactionsCount, setNewTransactionsCount] = useState(0);
+  const [socket, setSocket] = useState(null);
 
-  useEffect(() => {
-    const socket = io(SOCKET_URL, {
-      auth: {
-        token: localStorage.getItem("authToken"),
-      },
-    });
+  // Convert Map to array for rendering (newest first)
+  const allTransactions = useMemo(() => 
+    Array.from(transactionsMap.values()).sort((a, b) => 
+      new Date(b.payment_time) - new Date(a.payment_time)), 
+    [transactionsMap]);
 
-    socket.on("transaction", (newTransaction) => {
-      handleNewTransaction(newTransaction);
-    });
+  // Filter transactions
+  const filteredTransactions = useMemo(() => {
+    return statusFilter 
+      ? allTransactions.filter(tx => 
+          tx.status.toLowerCase() === statusFilter.toLowerCase())
+      : allTransactions;
+  }, [allTransactions, statusFilter]);
 
-    fetchTransactions();
+  // Enhanced pagination logic
+  const paginationData = useMemo(() => {
+    const total = filteredTransactions.length;
+    const totalPages = Math.max(1, Math.ceil(total / TRANSACTIONS_PER_PAGE));
+    
+    let currentPage = Math.max(1, Math.min(page, totalPages));
+    if (currentPage !== page) {
+      const params = new URLSearchParams(searchParams);
+      params.set("page", currentPage.toString());
+      window.history.replaceState(null, "", `?${params.toString()}`);
+    }
 
-    return () => {
-      socket.disconnect();
+    const start = (currentPage - 1) * TRANSACTIONS_PER_PAGE;
+    const end = start + TRANSACTIONS_PER_PAGE;
+    
+    return {
+      paginatedTransactions: filteredTransactions.slice(start, end),
+      totalPages,
+      currentPage,
+      totalTransactions: total,
+      hasNextPage: currentPage < totalPages,
+      hasPreviousPage: currentPage > 1,
+      showingStart: total > 0 ? start + 1 : 0,
+      showingEnd: Math.min(end, total)
     };
-  }, [page, statusFilter]);
+  }, [filteredTransactions, page, searchParams]);
 
-  const fetchTransactions = async () => {
+  // Fetch transactions
+  const fetchTransactions = useCallback(async () => {
     setLoading(true);
     try {
-      const endpoint = statusFilter
-        ? `/transactions?limit=${TRANSACTIONS_PER_PAGE}&page=${page}&status=${statusFilter}`
-        : `/transactions?limit=${TRANSACTIONS_PER_PAGE}&page=${page}`;
-
-      const res = await API.get(endpoint, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-        },
-      });
-
-      setAllTransactions(res.data.transactions);
-      setFilteredTransactions(res.data.transactions);
-      setPagination(res.data.pagination);
-    } catch (error) {
-      console.error("Error fetching transactions:", error);
+      const res = await API.get(`/transactions`);
+      const newMap = new Map();
+      res.data.transactions
+        .sort((a, b) => new Date(b.payment_time) - new Date(a.payment_time))
+        .forEach(tx => newMap.set(tx.collect_id, tx));
+      setTransactionsMap(newMap);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleNewTransaction = (newTx) => {
-    setAllTransactions((prev) => {
-      const exists = prev.some((tx) => tx.collect_id === newTx.collect_id);
-      return exists ? prev : [newTx, ...prev];
+  // Handle new transactions from WebSocket
+  const handleNewTransaction = useCallback((newTx) => {
+    console.log("New transaction received:", newTx);
+    if (transactionsMap.has(newTx.collect_id)) {
+      console.log("Transaction already exists:", newTx.collect_id);
+      return;
+    }
+
+    setTransactionsMap(prev => {
+      if (prev.has(newTx.collect_id)) return prev;
+      const newMap = new Map([[newTx.collect_id, newTx], ...prev]);
+      return newMap;
     });
 
-    if (!statusFilter || newTx.status === statusFilter) {
-      if (page === 1) {
-        setFilteredTransactions((prev) => {
-          const updated = [newTx, ...prev];
-          return updated.slice(0, TRANSACTIONS_PER_PAGE);
-        });
-      } else {
-        setNewTransactionsCount((prev) => prev + 1);
-      }
-
-      setPagination((prev) => ({
-        ...prev,
-        totalTransactions: prev.totalTransactions + 1,
-        totalPages: Math.ceil((prev.totalTransactions + 1) / TRANSACTIONS_PER_PAGE),
-      }));
+    if (page !== 1) {
+      setNewTransactionsCount(prev => prev + 1);
     }
-  };
+  }, [page]);
 
-  const handleStatusFilterChange = (value) => {
-    setStatusFilter(value);
-    setPage(1);
+  // Update URL and reset new transactions count
+  const updatePage = (newPage) => {
+    const params = new URLSearchParams(searchParams);
+    params.set("page", newPage.toString());
+    setSearchParams(params);
     setNewTransactionsCount(0);
   };
+
+  // Initialize
+  useEffect(() => {
+    const authToken = localStorage.getItem("authToken");
+    if (!authToken) {
+      console.error("No auth token found for WebSocket connection");
+      return;
+    }
+
+    const newSocket = io(SOCKET_URL, {
+      auth: { token: authToken },
+      transports: ["websocket"], // Force WebSocket transport
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+    });
+
+    newSocket.on("connect", () => {
+      console.log("WebSocket connected");
+    });
+
+
+    newSocket.on("transaction", handleNewTransaction);
+
+    setSocket(newSocket);
+    fetchTransactions();
+
+    return () => {
+      newSocket.off("transaction", handleNewTransaction);
+      newSocket.disconnect();
+    };
+  }, [fetchTransactions, handleNewTransaction]);
+
+  // Reset to page 1 when status filter changes
+  useEffect(() => {
+    if (statusFilter && page !== 1) {
+      updatePage(1);
+    }
+  }, [statusFilter, page]);
+
+  const handleStatusFilterChange = (value) => {
+    const params = new URLSearchParams();
+    params.set("page", "1");
+    if (value) params.set("status", value);
+    setSearchParams(params);
+    setNewTransactionsCount(0);
+  };
+
 
   const formatPaymentTime = (timestamp) => {
     if (!timestamp) return "-";
@@ -140,33 +196,27 @@ function TransactionTable() {
     return "hover:bg-gray-50";
   };
 
-  const getShowingRange = () => {
-    if (filteredTransactions.length === 0) return "0-0";
-    const start = (page - 1) * TRANSACTIONS_PER_PAGE + 1;
-    const end = start + filteredTransactions.length - 1;
-    return `${start}-${end}`;
-  };
-
   return (
     <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-800">Transaction History</h2>
-          <p className="text-xs text-gray-500 mt-1">View and manage payment transactions</p>
-        </div>
-        <div className="flex items-center space-x-2 w-full sm:w-auto">
-          <select
-            className="w-full sm:w-40 border border-gray-300 rounded-md px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-700 shadow-sm"
-            value={statusFilter}
-            onChange={(e) => handleStatusFilterChange(e.target.value)}
-          >
-            <option value="">All Status</option>
-            <option value="success">Success</option>
-            <option value="failed">Failed</option>
-            <option value="pending">Pending</option>
-          </select>
-        </div>
+    {/* Header and filter controls (same as before) */}
+    <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div>
+        <h2 className="text-lg font-semibold text-gray-800">Transaction History</h2>
+        <p className="text-xs text-gray-500 mt-1">View and manage payment transactions</p>
       </div>
+      <div className="flex items-center space-x-2 w-full sm:w-auto">
+        <select
+          className="w-full sm:w-40 border border-gray-300 rounded-md px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-700 shadow-sm"
+          value={statusFilter}
+          onChange={(e) => handleStatusFilterChange(e.target.value)}
+        >
+          <option value="">All Status</option>
+          <option value="success">Success</option>
+          <option value="failed">Failed</option>
+          <option value="pending">Pending</option>
+        </select>
+      </div>
+    </div>
 
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
@@ -205,8 +255,8 @@ function TransactionTable() {
                   </div>
                 </td>
               </tr>
-            ) : filteredTransactions.length > 0 ? (
-              filteredTransactions.map((tx) => (
+            ) : paginationData.paginatedTransactions.length > 0 ? (
+              paginationData.paginatedTransactions.map((tx) => (
                 <tr key={tx.collect_id} className={getRowClasses(tx.status)}>
                   <td className="px-4 py-3 whitespace-nowrap text-xs font-medium text-gray-900">
                     <span className="font-mono">{tx.collect_id}</span>
@@ -275,14 +325,11 @@ function TransactionTable() {
 
       <div className="px-4 py-3 border-t border-gray-200 bg-gray-50 flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="text-xs text-gray-600">
-          Showing <span className="font-medium">{getShowingRange()}</span> of{" "}
-          <span className="font-medium">{pagination.totalTransactions}</span>
-          {page !== 1 && newTransactionsCount > 0 && (
+          Showing <span className="font-medium">{paginationData.showingStart}-{paginationData.showingEnd}</span> of{" "}
+          <span className="font-medium">{paginationData.totalTransactions}</span>
+          {paginationData.currentPage !== 1 && newTransactionsCount > 0 && (
             <button
-              onClick={() => {
-                setPage(1);
-                setNewTransactionsCount(0);
-              }}
+              onClick={() => updatePage(1)}
               className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full"
             >
               {newTransactionsCount} new
@@ -291,13 +338,10 @@ function TransactionTable() {
         </div>
         <div className="flex space-x-1">
           <button
-            onClick={() => {
-              setPage((p) => Math.max(1, p - 1));
-              setNewTransactionsCount(0);
-            }}
-            disabled={page <= 1 || loading}
+            onClick={() => updatePage(paginationData.currentPage - 1)}
+            disabled={!paginationData.hasPreviousPage || loading}
             className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
-              page > 1
+              paginationData.hasPreviousPage
                 ? "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300 shadow-sm"
                 : "bg-gray-100 text-gray-400 cursor-not-allowed"
             }`}
@@ -305,17 +349,14 @@ function TransactionTable() {
             Previous
           </button>
 
-          {pagination.totalPages <= 10 ? (
+          {paginationData.totalPages <= 10 ? (
             <div className="flex space-x-1">
-              {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map((pageNum) => (
+              {Array.from({ length: paginationData.totalPages }, (_, i) => i + 1).map((pageNum) => (
                 <button
                   key={pageNum}
-                  onClick={() => {
-                    setPage(pageNum);
-                    setNewTransactionsCount(0);
-                  }}
+                  onClick={() => updatePage(pageNum)}
                   className={`px-2.5 py-1 rounded text-xs font-medium ${
-                    page === pageNum
+                    paginationData.currentPage === pageNum
                       ? "bg-blue-100 text-blue-700 border border-blue-200"
                       : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
                   }`}
@@ -326,18 +367,15 @@ function TransactionTable() {
             </div>
           ) : (
             <div className="px-2.5 py-1 bg-white border border-gray-300 rounded text-xs font-medium text-gray-700">
-              Page {page} of {pagination.totalPages}
+              Page {paginationData.currentPage} of {paginationData.totalPages}
             </div>
           )}
 
           <button
-            onClick={() => {
-              setPage((p) => Math.min(pagination.totalPages, p + 1));
-              setNewTransactionsCount(0);
-            }}
-            disabled={page >= pagination.totalPages || loading}
+            onClick={() => updatePage(paginationData.currentPage + 1)}
+            disabled={!paginationData.hasNextPage || loading}
             className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
-              page < pagination.totalPages
+              paginationData.hasNextPage
                 ? "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300 shadow-sm"
                 : "bg-gray-100 text-gray-400 cursor-not-allowed"
             }`}

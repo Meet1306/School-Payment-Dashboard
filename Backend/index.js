@@ -1,9 +1,9 @@
 const express = require("express");
 const mongoose = require("mongoose");
-const dotenv = require("dotenv");
 const cors = require("cors");
 const { Server } = require("socket.io");
 const http = require("http");
+const dotenv = require("dotenv");
 dotenv.config();
 
 const port = process.env.PORT || 5000;

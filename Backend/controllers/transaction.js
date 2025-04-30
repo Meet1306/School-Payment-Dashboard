@@ -3,7 +3,6 @@ const { order } = require("../models/order");
 const { orderStatus } = require("../models/orderStatus");
 const axios = require("axios");
 
-
 const handleCreateTransaction = async (req, res) => {
   try {
     const {
@@ -81,60 +80,57 @@ const handleCreateTransaction = async (req, res) => {
 
 const handleFetchAllTransactions = async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit) || 5;
-    const page = parseInt(req.query.page) || 1;
+    //   const limit = parseInt(req.query.limit) || 5;
+    //   const page = parseInt(req.query.page) || 1;
 
-    const skip = (page - 1) * limit;
-    const totalTransactions = await orderStatus.countDocuments({});
-    const totalPages = Math.ceil(totalTransactions / limit);
-    const hasNextPage = page < totalPages;
-    const hasPreviousPage = page > 1;
-    const nextPage = hasNextPage ? page + 1 : null;
-    const previousPage = hasPreviousPage ? page - 1 : null;
-    const pagination = {
-      totalTransactions,
-      totalPages,
-      hasNextPage,
-      hasPreviousPage,
-      nextPage,
-      previousPage,
-    };
+    //   const skip = (page - 1) * limit;
+    //   const totalTransactions = await orderStatus.countDocuments({});
+    //   const totalPages = Math.ceil(totalTransactions / limit);
+    //   const hasNextPage = page < totalPages;
+    //   const hasPreviousPage = page > 1;
+    //   const nextPage = hasNextPage ? page + 1 : null;
+    //   const previousPage = hasPreviousPage ? page - 1 : null;
+    //   const pagination = {
+    //     totalTransactions,
+    //     totalPages,
+    //     hasNextPage,
+    //     hasPreviousPage,
+    //     nextPage,
+    //     previousPage,
+    //   };
 
-    const transactions = await orderStatus
-      .aggregate([
-        {
-          $lookup: {
-            from: "orders",
-            localField: "collect_id",
-            foreignField: "txId",
-            as: "orderData",
-          },
+    const transactions = await orderStatus.aggregate([
+      {
+        $lookup: {
+          from: "orders",
+          localField: "collect_id",
+          foreignField: "txId",
+          as: "orderData",
         },
-        {
-          $unwind: "$orderData",
+      },
+      {
+        $unwind: "$orderData",
+      },
+      {
+        $project: {
+          collect_id: 1,
+          school_id: "$orderData.school_id",
+          gateway: "$orderData.gateway_name",
+          order_amount: 1,
+          transaction_amount: 1,
+          status: 1,
+          payment_time: 1,
+          custom_order_id: "$orderData._id",
         },
-        {
-          $project: {
-            collect_id: 1,
-            school_id: "$orderData.school_id",
-            gateway: "$orderData.gateway_name",
-            order_amount: 1,
-            transaction_amount: 1,
-            status: 1,
-            payment_time: 1,
-            custom_order_id: "$orderData._id",
-          },
+      },
+      {
+        $sort: {
+          payment_time: -1,
         },
-        {
-          $sort: {
-            payment_time: -1,
-          },
-        },
-      ])
-      .skip(skip)
-      .limit(limit);
+      },
+    ]);
 
-    res.json({ transactions, pagination });
+    res.json({ transactions });
   } catch (error) {
     console.log("Error fetching transactions:", error);
     return res.status(500).json({ message: "Internal server error" });

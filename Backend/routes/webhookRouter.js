@@ -47,7 +47,8 @@ webhookRouter.post("/", async (req, res) => {
       custom_order_id: Order._id,
     };
 
-    const io = req.app.get("io"); // Get the io instance from app settings
+    const io = req.app.get("io");
+
     if (io) {
       io.emit("transaction", transaction); // Emit the transaction event to all connected clients
     } else {
